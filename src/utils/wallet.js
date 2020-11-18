@@ -1,4 +1,4 @@
-import React, { useContext, useMemo } from 'react';
+import React, { useContext, useMemo, useState } from 'react';
 import * as bip32 from 'bip32';
 import * as bs58 from 'bs58';
 import {
@@ -125,6 +125,8 @@ export function WalletProvider({ children }) {
   const { mnemonic, seed, importsEncryptionKey } = getUnlockedMnemonicAndSeed();
   const connection = useConnection();
 
+  const [tkeyAccount, setTkeyAccount] = useState(null);
+
   // `privateKeyImports` are accounts imported *in addition* to HD wallets
   const [privateKeyImports, setPrivateKeyImports] = useLocalStorageState(
     'walletPrivateKeyImports',
@@ -137,32 +139,35 @@ export function WalletProvider({ children }) {
   );
 
   const wallet = useMemo(() => {
-    if (!seed) {
+    if (!tkeyAccount && !seed) {
       return null;
     }
-    const account =
-      walletSelector.walletIndex !== undefined
-        ? Wallet.getAccountFromSeed(
-            Buffer.from(seed, 'hex'),
-            walletSelector.walletIndex,
-          )
-        : new Account(
-            (() => {
-              const { nonce, ciphertext } = privateKeyImports[
-                walletSelector.importedPubkey
-              ];
-              return nacl.secretbox.open(
-                bs58.decode(ciphertext),
-                bs58.decode(nonce),
-                importsEncryptionKey,
-              );
-            })(),
-          );
+    const account = tkeyAccount
+      ? tkeyAccount
+      : walletSelector.walletIndex !== undefined
+      ? Wallet.getAccountFromSeed(
+          Buffer.from(seed, 'hex'),
+          walletSelector.walletIndex,
+        )
+      : new Account(
+          (() => {
+            const { nonce, ciphertext } = privateKeyImports[
+              walletSelector.importedPubkey
+            ];
+            return nacl.secretbox.open(
+              bs58.decode(ciphertext),
+              bs58.decode(nonce),
+              importsEncryptionKey,
+            );
+          })(),
+        );
     return new Wallet(connection, account);
   }, [
-    connection,
     seed,
-    walletSelector,
+    tkeyAccount,
+    walletSelector.walletIndex,
+    walletSelector.importedPubkey,
+    connection,
     privateKeyImports,
     importsEncryptionKey,
   ]);
@@ -178,6 +183,8 @@ export function WalletProvider({ children }) {
         setWalletSelector,
         privateKeyImports,
         setPrivateKeyImports,
+        tkeyAccount,
+        setTkeyAccount,
       }}
     >
       {children}
@@ -304,15 +311,19 @@ export function useWalletSelector() {
     setWalletSelector,
     privateKeyImports,
     setPrivateKeyImports,
+    setTkeyAccount,
+    tkeyAccount,
   } = useContext(WalletContext);
 
   // `walletCount` is the number of HD wallets.
   const [walletCount, setWalletCount] = useLocalStorageState('walletCount', 1);
 
-  function addAccount({ name, importedAccount }) {
+  function addAccount({ name, importedAccount, isTkey }) {
     if (importedAccount === undefined) {
       name && localStorage.setItem(`name${walletCount}`, name);
       setWalletCount(walletCount + 1);
+    } else if (isTkey) {
+      setTkeyAccount(importedAccount);
     } else {
       const nonce = nacl.randomBytes(nacl.secretbox.nonceLength);
       const plaintext = importedAccount.secretKey;
@@ -329,21 +340,36 @@ export function useWalletSelector() {
   }
 
   const accounts = useMemo(() => {
-    if (!seed) {
-      return [];
+    let derivedAccounts = [];
+    if (seed) {
+      const seedBuffer = Buffer.from(seed, 'hex');
+      derivedAccounts = [...Array(walletCount).keys()].map((idx) => {
+        let address = Wallet.getAccountFromSeed(seedBuffer, idx).publicKey;
+        let name = localStorage.getItem(`name${idx}`);
+        return {
+          selector: { walletIndex: idx, importedPubkey: undefined },
+          isSelected: walletSelector.walletIndex === idx,
+          address,
+          name: idx === 0 ? 'Main account' : name || `Account ${idx}`,
+        };
+      });
     }
 
-    const seedBuffer = Buffer.from(seed, 'hex');
-    const derivedAccounts = [...Array(walletCount).keys()].map((idx) => {
-      let address = Wallet.getAccountFromSeed(seedBuffer, idx).publicKey;
-      let name = localStorage.getItem(`name${idx}`);
-      return {
-        selector: { walletIndex: idx, importedPubkey: undefined },
-        isSelected: walletSelector.walletIndex === idx,
-        address,
-        name: idx === 0 ? 'Main account' : name || `Account ${idx}`,
-      };
-    });
+    const tkeyAccountObj = tkeyAccount
+      ? {
+          selector: {
+            walletIndex: undefined,
+            importedPubkey: tkeyAccount.publicKey.toString(),
+          },
+          isSelected:
+            walletSelector.importedPubkey === tkeyAccount.publicKey.toString(),
+          name: 'Tkey',
+          address: tkeyAccount.publicKey,
+        }
+      : undefined;
+    if (tkeyAccountObj) {
+      derivedAccounts.push(tkeyAccountObj);
+    }
 
     const importedAccounts = Object.keys(privateKeyImports).map((pubkey) => {
       const { name } = privateKeyImports[pubkey];
@@ -356,7 +382,14 @@ export function useWalletSelector() {
     });
 
     return derivedAccounts.concat(importedAccounts);
-  }, [seed, walletCount, walletSelector, privateKeyImports]);
+  }, [
+    seed,
+    tkeyAccount,
+    privateKeyImports,
+    walletCount,
+    walletSelector.walletIndex,
+    walletSelector.importedPubkey,
+  ]);
 
   return { accounts, setWalletSelector, addAccount };
 }

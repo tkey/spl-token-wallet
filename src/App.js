@@ -10,6 +10,7 @@ import NavigationFrame from './components/NavigationFrame';
 import { ConnectionProvider } from './utils/connection';
 import WalletPage from './pages/WalletPage';
 import { useWallet, WalletProvider } from './utils/wallet';
+import { TkeyProvider } from './utils/tkey/tkey';
 import LoadingIndicator from './components/LoadingIndicator';
 import { SnackbarProvider } from 'notistack';
 import PopupPage from './pages/PopupPage';
@@ -39,15 +40,17 @@ export default function App() {
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <ConnectionProvider>
-          <WalletProvider>
-            <SnackbarProvider maxSnack={5} autoHideDuration={8000}>
-              <NavigationFrame>
-                <Suspense fallback={<LoadingIndicator />}>
-                  <PageContents />
-                </Suspense>
-              </NavigationFrame>
-            </SnackbarProvider>
-          </WalletProvider>
+          <TkeyProvider>
+            <WalletProvider>
+              <SnackbarProvider maxSnack={5} autoHideDuration={8000}>
+                <NavigationFrame>
+                  <Suspense fallback={<LoadingIndicator />}>
+                    <PageContents />
+                  </Suspense>
+                </NavigationFrame>
+              </SnackbarProvider>
+            </WalletProvider>
+          </TkeyProvider>
         </ConnectionProvider>
       </ThemeProvider>
     </Suspense>
