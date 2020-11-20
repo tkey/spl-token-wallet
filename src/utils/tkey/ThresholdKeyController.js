@@ -13,6 +13,7 @@ export class ThresholdKeyController {
     this.settingsPageData = {};
     this.postboxKey = '';
     this.privKey = '';
+    this.isShareInputRequired = false;
   }
 
   _init = async (postboxKey) => {
@@ -112,12 +113,20 @@ export class ThresholdKeyController {
         await this.tKey.modules[
           WEB_STORAGE_MODULE_NAME
         ].inputShareFromWebStorage();
+        this.isShareInputRequired = false;
       } catch (err) {
         console.warn("Couldn't find on device share");
+        this.isShareInputRequired = true;
       }
     }
     const { privKey } = await this.tKey.reconstructKey();
     console.log(privKey.toString('hex'), 'reconstructed tkey');
     this.privKey = privKey.toString('hex');
+  }
+
+  async addDeviceShare(share) {
+    await this.tKey.modules[WEB_STORAGE_MODULE_NAME].storeDeviceShare(share);
+    await this.calculateSettingsPageData();
+    await this.finalizeTKey();
   }
 }

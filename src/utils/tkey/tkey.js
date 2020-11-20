@@ -63,5 +63,30 @@ export function useTkeyLogin() {
   return loginFn;
 }
 
+export function useTkeyShareInput() {
+  const { thresholdKeyInstance } = useContext(TkeyContext);
+  const { addAccount, setWalletSelector } = useWalletSelector();
+  const fn = async (share) => {
+    await thresholdKeyInstance.addDeviceShare(share);
+    const { privKey } = thresholdKeyInstance;
+    console.log('adding account', privKey);
+    const tkeyAccount = new Account(
+      nacl.sign.keyPair.fromSeed(
+        fromHexString(privKey.padStart(64, 0)),
+      ).secretKey,
+    );
+    addAccount({
+      name: 'TKey',
+      importedAccount: tkeyAccount,
+      isTkey: true,
+    });
+    setWalletSelector({
+      walletIndex: undefined,
+      importedPubkey: tkeyAccount.publicKey.toString(),
+    });
+  };
+  return { flag: thresholdKeyInstance.isPasswordInputRequired, action: fn };
+}
+
 const fromHexString = (hexString) =>
   new Uint8Array(hexString.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)));
