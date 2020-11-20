@@ -151,9 +151,9 @@ export function WalletProvider({ children }) {
         )
       : new Account(
           (() => {
-            const { nonce, ciphertext } = privateKeyImports[
-              walletSelector.importedPubkey
-            ];
+            const { nonce, ciphertext } =
+              privateKeyImports[walletSelector.importedPubkey] || {};
+            if (!nonce || !ciphertext) return null;
             return nacl.secretbox.open(
               bs58.decode(ciphertext),
               bs58.decode(nonce),

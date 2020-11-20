@@ -7,16 +7,50 @@ import TextField from '@material-ui/core/TextField';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import FormGroup from '@material-ui/core/FormGroup';
 import Switch from '@material-ui/core/Switch';
+import Typography from '@material-ui/core/Typography';
 import { Account } from '@solana/web3.js';
 import * as bs58 from 'bs58';
 import DialogForm from './DialogForm';
+import { useTkeyLogin, useTkeyPostboxKey } from '../utils/tkey/tkey';
+
+function TkeyForm(props) {
+  const tkeyLogin = useTkeyLogin();
+  const loginFn = async () => {
+    await tkeyLogin();
+    props.onClose();
+  };
+  return (
+    <>
+      <div>
+        <Button
+          style={{ height: '50px' }}
+          fullWidth
+          onClick={loginFn}
+          variant="outlined"
+        >
+          Sign in With Google
+        </Button>
+      </div>
+      <Typography
+        align="center"
+        style={{ marginTop: '20px', marginBottom: '20px' }}
+      >
+        Or
+      </Typography>
+    </>
+  );
+}
 
 export default function AddAccountDialog({ open, onAdd, onClose }) {
   const [name, setName] = useState('');
   const [isImport, setIsImport] = useState(false);
   const [importedPrivateKey, setPrivateKey] = useState('');
 
-  const importedAccount = isImport ? decodeAccount(importedPrivateKey) : undefined;
+  const postboxKey = useTkeyPostboxKey();
+
+  const importedAccount = isImport
+    ? decodeAccount(importedPrivateKey)
+    : undefined;
   const isAddEnabled = isImport ? name && importedAccount !== undefined : name;
 
   return (
@@ -34,6 +68,7 @@ export default function AddAccountDialog({ open, onAdd, onClose }) {
             flexDirection: 'column',
           }}
         >
+          {!postboxKey ? <TkeyForm onClose={onClose} /> : null}
           <TextField
             label="Name"
             fullWidth
