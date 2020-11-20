@@ -129,4 +129,8 @@ export class ThresholdKeyController {
     await this.calculateSettingsPageData();
     await this.finalizeTKey();
   }
+
+  async exportDeviceShare() {
+    return this.tKey.modules[WEB_STORAGE_MODULE_NAME].getDeviceShare();
+  }
 }
