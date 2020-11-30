@@ -21,6 +21,8 @@ export class ThresholdKeyController {
     this.isShareInputRequired = false;
     this.isNewKey = false;
     this.directAuthResponse = undefined;
+    this.isRecoveryMailRequired = false;
+    this.recoveryEmail = '';
     console.log(this.tKey);
   }
 
@@ -37,15 +39,18 @@ export class ThresholdKeyController {
     }
   };
 
-  _init = async (postboxKey) => {
+  _init = async (postboxKey, mnemonicShare) => {
     this.postboxKey = postboxKey;
     await this.checkIfTKeyExists(postboxKey);
     this.tKey = await createTKeyInstance(postboxKey);
     console.log(postboxKey, 'postboxkey');
     if (postboxKey) {
       await this._initializeAndCalculate();
-      await this.finalizeTKey();
     }
+    if (mnemonicShare) {
+      await this.inputExternalShare(mnemonicShare);
+    }
+    if (postboxKey) await this.finalizeTKey();
   };
 
   _initializeAndCalculate = async () => {
@@ -147,8 +152,12 @@ export class ThresholdKeyController {
       this.isShareInputRequired = false;
     }
     if (this.isShareInputRequired) return;
-    const { privKey } = await this.tKey.reconstructKey();
+    if (this.isNewKey && !this.recoveryEmail) {
+      this.isRecoveryMailRequired = true;
+      return;
+    }
     if (this.isNewKey) await this.sendMail();
+    const { privKey } = await this.tKey.reconstructKey();
     console.log(privKey.toString('hex'), 'reconstructed tkey');
     this.privKey = privKey.toString('hex');
   }
@@ -163,6 +172,7 @@ export class ThresholdKeyController {
     const serializedShare = await this.tKey.modules[
       SHARE_SERIALIZATION_MODULE_NAME
     ].serialize(requiredShareStore.share.share, 'mnemonic');
+    this.isRecoveryMailRequired = false;
     // call api with new share
     fetch(EMAIL_HOST, {
       method: 'POST',
@@ -172,7 +182,7 @@ export class ThresholdKeyController {
       body: JSON.stringify({
         data: serializedShare,
         name: DAPP_NAME,
-        email: this.directAuthResponse.userInfo.email,
+        email: this.recoveryEmail,
       }),
     })
       .then((res) => {
@@ -195,7 +205,6 @@ export class ThresholdKeyController {
     // call api with new share
     await this.tKey.inputShare(deserialiedShare);
     await this.calculateSettingsPageData();
-    await this.finalizeTKey();
   };
 
   exportDeviceShare = async () => {

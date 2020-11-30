@@ -17,9 +17,14 @@ import FormControlLabel from '@material-ui/core/FormControlLabel';
 import CardActions from '@material-ui/core/CardActions';
 import Button from '@material-ui/core/Button';
 import { useCallAsync } from '../utils/notifications';
-import { useTkeyLogin, useTkeyShareInput } from '../utils/tkey/tkey';
+import {
+  useTkeyLogin,
+  useTkeyRecoveryEmailInput,
+  useTkeyShareInput,
+} from '../utils/tkey/tkey';
 import Link from '@material-ui/core/Link';
 import TkeyShareInputDialog from '../components/TkeyShareInputDialog';
+import TkeyEmailInputDialog from '../components/TkeyEmailInput';
 
 export default function LoginPage() {
   const [restore, setRestore] = useState(false);
@@ -47,6 +52,10 @@ export default function LoginPage() {
 function TkeyForm() {
   const tkeyLogin = useTkeyLogin();
   const { action, flag } = useTkeyShareInput();
+  const {
+    flag: recoveryFlag,
+    action: recoveryAction,
+  } = useTkeyRecoveryEmailInput();
 
   return (
     <>
@@ -64,6 +73,7 @@ function TkeyForm() {
         </CardActions>
       </Card>
       <TkeyShareInputDialog open={flag} onAdd={action} />
+      <TkeyEmailInputDialog open={recoveryFlag} onAdd={recoveryAction} />
     </>
   );
 }

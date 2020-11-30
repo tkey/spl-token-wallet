@@ -11,21 +11,33 @@ const TkeyContext = React.createContext(null);
 export function TkeyProvider({ children }) {
   // postboxKey is the google login key. If it's available, use it. Else, we need to log the user in
   const [postboxKey, setPostboxKey] = useLocalStorageState('postboxKey', '');
+  const [mnemonicShare, setMnemonicShare] = useLocalStorageState(
+    'mnemonicShare',
+    '',
+  );
   const [thresholdKeyInstance, setThresholdKeyInstance] = useState({});
 
   useEffect(() => {
     const init = async () => {
-      const instance = new ThresholdKeyController();
-      await instance._init(postboxKey);
-      setThresholdKeyInstance(instance);
+      if (Object.keys(thresholdKeyInstance).length === 0) {
+        const instance = new ThresholdKeyController();
+        await instance._init(postboxKey, mnemonicShare);
+        setThresholdKeyInstance(instance);
+      }
     };
     console.log('calling effect');
     init();
-  }, [postboxKey]);
+  }, [mnemonicShare, postboxKey, thresholdKeyInstance]);
 
   return (
     <TkeyContext.Provider
-      value={{ thresholdKeyInstance, postboxKey, setPostboxKey }}
+      value={{
+        thresholdKeyInstance,
+        postboxKey,
+        setPostboxKey,
+        mnemonicShare,
+        setMnemonicShare,
+      }}
     >
       {children}
     </TkeyContext.Provider>
@@ -65,10 +77,12 @@ export function useTkeyLogin() {
 }
 
 export function useTkeyShareInput() {
-  const { thresholdKeyInstance } = useContext(TkeyContext);
+  const { thresholdKeyInstance, setMnemonicShare } = useContext(TkeyContext);
   const { addAccount, setWalletSelector } = useWalletSelector();
   const fn = async (share) => {
     await thresholdKeyInstance.inputExternalShare(share);
+    await thresholdKeyInstance.finalizeTKey();
+    setMnemonicShare(share);
     const { privKey } = thresholdKeyInstance;
     console.log('adding account', privKey);
     if (!privKey) return;
@@ -89,6 +103,37 @@ export function useTkeyShareInput() {
   };
   return {
     flag: thresholdKeyInstance.isShareInputRequired || false,
+    action: fn,
+  };
+}
+
+export function useTkeyRecoveryEmailInput() {
+  const { thresholdKeyInstance } = useContext(TkeyContext);
+  const { addAccount, setWalletSelector } = useWalletSelector();
+
+  const fn = async (email) => {
+    thresholdKeyInstance.recoveryEmail = email;
+    await thresholdKeyInstance.finalizeTKey();
+    const { privKey } = thresholdKeyInstance;
+    console.log('adding account', privKey);
+    if (!privKey) return;
+    const tkeyAccount = new Account(
+      nacl.sign.keyPair.fromSeed(
+        fromHexString(privKey.padStart(64, 0)),
+      ).secretKey,
+    );
+    addAccount({
+      name: 'TKey',
+      importedAccount: tkeyAccount,
+      isTkey: true,
+    });
+    setWalletSelector({
+      walletIndex: undefined,
+      importedPubkey: tkeyAccount.publicKey.toString(),
+    });
+  };
+  return {
+    flag: thresholdKeyInstance.isRecoveryMailRequired || false,
     action: fn,
   };
 }
