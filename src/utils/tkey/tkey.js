@@ -67,7 +67,7 @@ export function useTkeyShareInput() {
   const { thresholdKeyInstance } = useContext(TkeyContext);
   const { addAccount, setWalletSelector } = useWalletSelector();
   const fn = async (share) => {
-    await thresholdKeyInstance.addDeviceShare(share);
+    await thresholdKeyInstance.inputExternalShare(share);
     const { privKey } = thresholdKeyInstance;
     console.log('adding account', privKey);
     const tkeyAccount = new Account(

@@ -22,6 +22,12 @@ export const verifierParams = {
 
 export const CHROME_EXTENSION_STORAGE_MODULE_NAME = 'chromeExtensionStorage';
 
+export const METADATA_HOST = 'https://metadata.tor.us';
+
+export const EMAIL_HOST = 'https://email.tkey.io';
+
+export const DAPP_NAME = 'Sollet';
+
 export const THRESHOLD_KEY_PRIORITY_ORDER = [
   WEB_STORAGE_MODULE_NAME,
   SECURITY_QUESTIONS_MODULE_NAME,

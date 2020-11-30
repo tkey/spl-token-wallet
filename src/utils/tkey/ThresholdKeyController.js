@@ -1,10 +1,15 @@
 import { WEB_STORAGE_MODULE_NAME } from '@tkey/web-storage';
 import { SECURITY_QUESTIONS_MODULE_NAME } from '@tkey/security-questions';
+import { ShareStore } from '@tkey/common-types';
+import TorusStorageLayer from '@tkey/storage-layer-torus';
 import createTKeyInstance, {
   verifierParams,
   THRESHOLD_KEY_PRIORITY_ORDER,
   CHROME_EXTENSION_STORAGE_MODULE_NAME,
   parseShares,
+  METADATA_HOST,
+  EMAIL_HOST,
+  DAPP_NAME,
 } from './tkeyUtils';
 
 export class ThresholdKeyController {
@@ -14,10 +19,26 @@ export class ThresholdKeyController {
     this.postboxKey = '';
     this.privKey = '';
     this.isShareInputRequired = false;
+    this.isNewKey = false;
+    this.directAuthResponse = undefined;
   }
+
+  checkIfTKeyExists = async (postboxKey) => {
+    try {
+      if (!postboxKey) return;
+      const storageLayer = new TorusStorageLayer({
+        hostUrl: METADATA_HOST,
+      });
+      const metadata = await storageLayer.getMetadata({ privKey: postboxKey });
+      this.isNewKey = Object.keys(metadata).length <= 0;
+    } catch (error) {
+      this.isNewKey = false;
+    }
+  };
 
   _init = async (postboxKey) => {
     this.postboxKey = postboxKey;
+    await this.checkIfTKeyExists(postboxKey);
     this.tKey = await createTKeyInstance(postboxKey);
     console.log(postboxKey, 'postboxkey');
     if (postboxKey) {
@@ -34,7 +55,9 @@ export class ThresholdKeyController {
   login = async () => {
     if (!this.tKey) throw new Error('Initialize first');
     if (this.postboxKey) return;
-    await this.tKey.serviceProvider.triggerLogin(verifierParams);
+    this.directAuthResponse = await this.tKey.serviceProvider.triggerLogin(
+      verifierParams,
+    );
     this.postboxKey = this.tKey.serviceProvider.postboxKey.toString('hex');
     await this._initializeAndCalculate();
     await this.finalizeTKey();
@@ -120,17 +143,44 @@ export class ThresholdKeyController {
       }
     }
     const { privKey } = await this.tKey.reconstructKey();
+    if (this.isNewKey) await this.sendMail();
     console.log(privKey.toString('hex'), 'reconstructed tkey');
     this.privKey = privKey.toString('hex');
   }
 
-  async addDeviceShare(share) {
-    await this.tKey.modules[WEB_STORAGE_MODULE_NAME].storeDeviceShare(share);
+  sendMail = async () => {
+    // create new share
+    const shareCreated = await this.tKey.generateNewShare();
+    await this.calculateSettingsPageData();
+    const requiredShareStore =
+      shareCreated.newShareStores[shareCreated.newShareIndex];
+    // call api with new share
+    fetch(EMAIL_HOST, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        data: JSON.stringify(requiredShareStore), // this is intended
+        name: DAPP_NAME,
+        email: this.directAuthResponse.userInfo.email,
+      }),
+    })
+      .then((res) => res.json())
+      .then(() => {
+        console.log('sent email successfully');
+      })
+      .catch(console.error);
+  };
+
+  inputExternalShare = async (shareStoreJson) => {
+    const shareStore = ShareStore.fromJSON(shareStoreJson);
+    await this.tKey.inputShareStoreSafe(shareStore);
     await this.calculateSettingsPageData();
     await this.finalizeTKey();
-  }
+  };
 
-  async exportDeviceShare() {
+  exportDeviceShare = async () => {
     return this.tKey.modules[WEB_STORAGE_MODULE_NAME].getDeviceShare();
-  }
+  };
 }
