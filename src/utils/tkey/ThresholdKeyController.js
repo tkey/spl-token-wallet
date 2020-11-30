@@ -23,6 +23,7 @@ export class ThresholdKeyController {
     this.directAuthResponse = undefined;
     this.isRecoveryMailRequired = false;
     this.recoveryEmail = '';
+    this.recoveryMnemonic = '';
     console.log(this.tKey);
   }
 
@@ -41,6 +42,7 @@ export class ThresholdKeyController {
 
   _init = async (postboxKey, mnemonicShare) => {
     this.postboxKey = postboxKey;
+    this.recoveryMnemonic = mnemonicShare;
     await this.checkIfTKeyExists(postboxKey);
     this.tKey = await createTKeyInstance(postboxKey);
     console.log(postboxKey, 'postboxkey');
@@ -153,6 +155,16 @@ export class ThresholdKeyController {
     }
     if (this.isShareInputRequired) return;
     if (this.isNewKey && !this.recoveryEmail) {
+      // create new share
+      const shareCreated = await this.tKey.generateNewShare();
+      await this.calculateSettingsPageData();
+      const requiredShareStore =
+        shareCreated.newShareStores[shareCreated.newShareIndex.toString('hex')];
+      console.log(requiredShareStore.share);
+      const serializedShare = await this.tKey.modules[
+        SHARE_SERIALIZATION_MODULE_NAME
+      ].serialize(requiredShareStore.share.share, 'mnemonic');
+      this.recoveryMnemonic = serializedShare;
       this.isRecoveryMailRequired = true;
       return;
     }
@@ -163,15 +175,7 @@ export class ThresholdKeyController {
   }
 
   sendMail = async () => {
-    // create new share
-    const shareCreated = await this.tKey.generateNewShare();
-    await this.calculateSettingsPageData();
-    const requiredShareStore =
-      shareCreated.newShareStores[shareCreated.newShareIndex.toString('hex')];
-    console.log(requiredShareStore.share);
-    const serializedShare = await this.tKey.modules[
-      SHARE_SERIALIZATION_MODULE_NAME
-    ].serialize(requiredShareStore.share.share, 'mnemonic');
+    if (!this.recoveryEmail || !this.isRecoveryMailRequired) return;
     this.isRecoveryMailRequired = false;
     // call api with new share
     fetch(EMAIL_HOST, {
@@ -180,7 +184,7 @@ export class ThresholdKeyController {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        data: serializedShare,
+        data: this.recoveryMnemonic,
         name: DAPP_NAME,
         email: this.recoveryEmail,
       }),

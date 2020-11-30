@@ -139,6 +139,7 @@ function WalletSelector() {
   const {
     flag: recoveryFlag,
     action: recoveryAction,
+    recoveryShare,
   } = useTkeyRecoveryEmailInput();
   const [anchorEl, setAnchorEl] = useState(null);
   const [addAccountOpen, setAddAccountOpen] = useState(false);
@@ -167,7 +168,11 @@ function WalletSelector() {
         }}
       />
       <TkeyShareInputDialog open={flag} onAdd={action} />
-      <TkeyEmailInputDialog open={recoveryFlag} onAdd={recoveryAction} />
+      <TkeyEmailInputDialog
+        open={recoveryFlag}
+        onAdd={recoveryAction}
+        recoveryShare={recoveryShare}
+      />
       <DeleteAccountDialog
         open={deleteAccountOpen}
         onClose={() => setDeleteAccountOpen(false)}

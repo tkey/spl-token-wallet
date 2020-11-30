@@ -134,6 +134,7 @@ export function useTkeyRecoveryEmailInput() {
   };
   return {
     flag: thresholdKeyInstance.isRecoveryMailRequired || false,
+    recoveryShare: thresholdKeyInstance.recoveryMnemonic,
     action: fn,
   };
 }

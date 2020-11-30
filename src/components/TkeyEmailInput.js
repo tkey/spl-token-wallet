@@ -5,10 +5,11 @@ import {
   DialogTitle,
   DialogContent,
   TextField,
+  Typography,
 } from '@material-ui/core';
 import DialogForm from './DialogForm';
 
-export default function TkeyEmailInputDialog({ open, onAdd }) {
+export default function TkeyEmailInputDialog({ open, onAdd, recoveryShare }) {
   const [recoveryEmail, setRecoveryEmail] = useState('');
 
   return (
@@ -21,6 +22,10 @@ export default function TkeyEmailInputDialog({ open, onAdd }) {
             flexDirection: 'column',
           }}
         >
+          <Typography>Here is your recovery mnemonic share</Typography>
+          <br />
+          <code>{recoveryShare}</code>
+          <br />
           <TextField
             label="Please enter a recovery email"
             fullWidth

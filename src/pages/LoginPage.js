@@ -55,6 +55,7 @@ function TkeyForm() {
   const {
     flag: recoveryFlag,
     action: recoveryAction,
+    recoveryShare,
   } = useTkeyRecoveryEmailInput();
 
   return (
@@ -73,7 +74,11 @@ function TkeyForm() {
         </CardActions>
       </Card>
       <TkeyShareInputDialog open={flag} onAdd={action} />
-      <TkeyEmailInputDialog open={recoveryFlag} onAdd={recoveryAction} />
+      <TkeyEmailInputDialog
+        open={recoveryFlag}
+        onAdd={recoveryAction}
+        recoveryShare={recoveryShare}
+      />
     </>
   );
 }
