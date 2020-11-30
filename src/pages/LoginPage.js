@@ -17,8 +17,9 @@ import FormControlLabel from '@material-ui/core/FormControlLabel';
 import CardActions from '@material-ui/core/CardActions';
 import Button from '@material-ui/core/Button';
 import { useCallAsync } from '../utils/notifications';
-import { useTkeyLogin } from '../utils/tkey/tkey';
+import { useTkeyLogin, useTkeyShareInput } from '../utils/tkey/tkey';
 import Link from '@material-ui/core/Link';
+import TkeyShareInputDialog from '../components/TkeyShareInputDialog';
 
 export default function LoginPage() {
   const [restore, setRestore] = useState(false);
@@ -45,20 +46,25 @@ export default function LoginPage() {
 
 function TkeyForm() {
   const tkeyLogin = useTkeyLogin();
+  const { action, flag } = useTkeyShareInput();
+
   return (
-    <Card>
-      <CardContent>
-        <Typography variant="h5" gutterBottom>
-          Threshold Key
-        </Typography>
-        <Typography paragraph>
-          Login with Google to create a new wallet / restore existing wallet
-        </Typography>
-      </CardContent>
-      <CardActions style={{ justifyContent: 'flex-end' }}>
-        <Button onClick={tkeyLogin}>Continue</Button>
-      </CardActions>
-    </Card>
+    <>
+      <Card>
+        <CardContent>
+          <Typography variant="h5" gutterBottom>
+            Threshold Key
+          </Typography>
+          <Typography paragraph>
+            Login with Google to create a new wallet / restore existing wallet
+          </Typography>
+        </CardContent>
+        <CardActions style={{ justifyContent: 'flex-end' }}>
+          <Button onClick={tkeyLogin}>Continue</Button>
+        </CardActions>
+      </Card>
+      <TkeyShareInputDialog open={flag} onAdd={action} />
+    </>
   );
 }
 

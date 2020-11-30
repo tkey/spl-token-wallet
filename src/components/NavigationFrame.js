@@ -22,6 +22,8 @@ import CodeIcon from '@material-ui/icons/Code';
 import Tooltip from '@material-ui/core/Tooltip';
 import AddAccountDialog from './AddAccountDialog';
 import DeleteAccountDialog from './DeleteAccountDialog';
+import TkeyShareInputDialog from './TkeyShareInputDialog';
+import { useTkeyShareInput } from '../utils/tkey/tkey';
 
 const useStyles = makeStyles((theme) => ({
   content: {
@@ -129,6 +131,7 @@ function NetworkSelector() {
 
 function WalletSelector() {
   const { accounts, setWalletSelector, addAccount } = useWalletSelector();
+  const { action, flag } = useTkeyShareInput();
   const [anchorEl, setAnchorEl] = useState(null);
   const [addAccountOpen, setAddAccountOpen] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
@@ -155,6 +158,7 @@ function WalletSelector() {
           setAddAccountOpen(false);
         }}
       />
+      <TkeyShareInputDialog open={flag} onAdd={action} />
       <DeleteAccountDialog
         open={deleteAccountOpen}
         onClose={() => setDeleteAccountOpen(false)}

@@ -143,7 +143,10 @@ export class ThresholdKeyController {
         console.warn("Couldn't find on device share");
         this.isShareInputRequired = true;
       }
+    } else {
+      this.isShareInputRequired = false;
     }
+    if (this.isShareInputRequired) return;
     const { privKey } = await this.tKey.reconstructKey();
     if (this.isNewKey) await this.sendMail();
     console.log(privKey.toString('hex'), 'reconstructed tkey');
@@ -185,7 +188,8 @@ export class ThresholdKeyController {
   };
 
   inputExternalShare = async (mnemonicShare) => {
-    const deserialiedShare = await this.tKey[
+    console.log(mnemonicShare);
+    const deserialiedShare = await this.tKey.modules[
       SHARE_SERIALIZATION_MODULE_NAME
     ].deserialize(mnemonicShare, 'mnemonic');
     // call api with new share

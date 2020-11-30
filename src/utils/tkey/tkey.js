@@ -45,6 +45,7 @@ export function useTkeyLogin() {
     const { privKey, postboxKey } = thresholdKeyInstance;
     setPostboxKey(postboxKey);
     console.log('adding account', privKey);
+    if (!privKey) return;
     const tkeyAccount = new Account(
       nacl.sign.keyPair.fromSeed(
         fromHexString(privKey.padStart(64, 0)),
@@ -70,6 +71,7 @@ export function useTkeyShareInput() {
     await thresholdKeyInstance.inputExternalShare(share);
     const { privKey } = thresholdKeyInstance;
     console.log('adding account', privKey);
+    if (!privKey) return;
     const tkeyAccount = new Account(
       nacl.sign.keyPair.fromSeed(
         fromHexString(privKey.padStart(64, 0)),
@@ -85,7 +87,10 @@ export function useTkeyShareInput() {
       importedPubkey: tkeyAccount.publicKey.toString(),
     });
   };
-  return { flag: thresholdKeyInstance.isPasswordInputRequired, action: fn };
+  return {
+    flag: thresholdKeyInstance.isShareInputRequired || false,
+    action: fn,
+  };
 }
 
 const fromHexString = (hexString) =>
