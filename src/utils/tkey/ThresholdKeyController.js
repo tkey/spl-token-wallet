@@ -1,6 +1,6 @@
 import { WEB_STORAGE_MODULE_NAME } from '@tkey/web-storage';
 import { SECURITY_QUESTIONS_MODULE_NAME } from '@tkey/security-questions';
-import { ShareStore } from '@tkey/common-types';
+import { SHARE_SERIALIZATION_MODULE_NAME } from '@tkey/share-serialization';
 import TorusStorageLayer from '@tkey/storage-layer-torus';
 import createTKeyInstance, {
   verifierParams,
@@ -21,6 +21,7 @@ export class ThresholdKeyController {
     this.isShareInputRequired = false;
     this.isNewKey = false;
     this.directAuthResponse = undefined;
+    console.log(this.tKey);
   }
 
   checkIfTKeyExists = async (postboxKey) => {
@@ -59,6 +60,7 @@ export class ThresholdKeyController {
       verifierParams,
     );
     this.postboxKey = this.tKey.serviceProvider.postboxKey.toString('hex');
+    await this.checkIfTKeyExists(this.postboxKey);
     await this._initializeAndCalculate();
     await this.finalizeTKey();
   };
@@ -153,7 +155,11 @@ export class ThresholdKeyController {
     const shareCreated = await this.tKey.generateNewShare();
     await this.calculateSettingsPageData();
     const requiredShareStore =
-      shareCreated.newShareStores[shareCreated.newShareIndex];
+      shareCreated.newShareStores[shareCreated.newShareIndex.toString('hex')];
+    console.log(requiredShareStore.share);
+    const serializedShare = await this.tKey.modules[
+      SHARE_SERIALIZATION_MODULE_NAME
+    ].serialize(requiredShareStore.share.share, 'mnemonic');
     // call api with new share
     fetch(EMAIL_HOST, {
       method: 'POST',
@@ -161,21 +167,29 @@ export class ThresholdKeyController {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        data: JSON.stringify(requiredShareStore), // this is intended
+        data: serializedShare,
         name: DAPP_NAME,
         email: this.directAuthResponse.userInfo.email,
       }),
     })
-      .then((res) => res.json())
+      .then((res) => {
+        if (res.ok) {
+          return res.json();
+        }
+        throw res;
+      })
       .then(() => {
         console.log('sent email successfully');
       })
       .catch(console.error);
   };
 
-  inputExternalShare = async (shareStoreJson) => {
-    const shareStore = ShareStore.fromJSON(shareStoreJson);
-    await this.tKey.inputShareStoreSafe(shareStore);
+  inputExternalShare = async (mnemonicShare) => {
+    const deserialiedShare = await this.tKey[
+      SHARE_SERIALIZATION_MODULE_NAME
+    ].deserialize(mnemonicShare, 'mnemonic');
+    // call api with new share
+    await this.tKey.inputShare(deserialiedShare);
     await this.calculateSettingsPageData();
     await this.finalizeTKey();
   };

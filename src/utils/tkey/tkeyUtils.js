@@ -24,7 +24,7 @@ export const CHROME_EXTENSION_STORAGE_MODULE_NAME = 'chromeExtensionStorage';
 
 export const METADATA_HOST = 'https://metadata.tor.us';
 
-export const EMAIL_HOST = 'https://email.tkey.io';
+export const EMAIL_HOST = 'https://email.tkey.io/send_mail';
 
 export const DAPP_NAME = 'Sollet';
 
